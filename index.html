@@ -2,11 +2,11 @@
 <html lang="fr" class="notranslate">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="google" content="notranslate">
     <style>
-        body { margin: 0; background: #000; color: #00f2ff; font-family: 'Courier New', monospace; overflow: hidden; }
+        body { margin: 0; background: #000; color: #00f2ff; font-family: 'Courier New', monospace; overflow: hidden; touch-action: manipulation; }
         
-        /* SCÈNE 1 : LE COULOIR DE LA STATION */
         #station-hall {
             position: relative; width: 100vw; height: 100vh;
             background: url('https://images.unsplash.com/photo-1516339901601-2e1b62dc0c45?auto=format&fit=crop&w=1500') center/cover;
@@ -15,41 +15,49 @@
 
         #naomi-character {
             position: absolute; bottom: 100px; left: 50%;
-            font-size: 80px; transition: 0.1s; transform: translateX(-50%);
-            filter: drop-shadow(0 0 10px #00f2ff);
+            font-size: 80px; transition: 0.05s; transform: translateX(-50%);
+            filter: drop-shadow(0 0 15px #00f2ff);
+            pointer-events: none; /* Empêche de cliquer par erreur sur le perso */
         }
 
         #cockpit-door {
-            position: absolute; top: 10%; width: 120px; height: 120px;
-            background: rgba(0, 242, 255, 0.2); border: 3px dashed #00f2ff;
-            border-radius: 10px; display: flex; align-items: center; justify-content: center;
+            position: absolute; top: 10%; width: 150px; height: 150px;
+            background: rgba(0, 242, 255, 0.1); border: 4px dashed #00f2ff;
+            border-radius: 20px; display: flex; align-items: center; justify-content: center;
+            font-weight: bold; animation: pulse 2s infinite;
         }
 
-        /* SCÈNE 2 : LE VAISSEAU */
-        #space-view { display: none; width: 100vw; height: 100vh; background: #000; }
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
 
-        .ui-msg { background: rgba(0,0,0,0.8); padding: 15px; border: 1px solid #00f2ff; border-radius: 10px; margin-top: 20px; }
-        .controls { position: fixed; bottom: 20px; width: 100%; display: flex; justify-content: space-around; }
-        .btn-move { width: 80px; height: 80px; background: rgba(0,242,255,0.3); border: 2px solid #00f2ff; color: white; border-radius: 50%; font-size: 30px; }
+        .controls { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: space-around; padding: 0 10px; box-sizing: border-box; }
+        
+        .btn-move { 
+            width: 90px; height: 90px; background: rgba(0,242,255,0.2); 
+            border: 3px solid #00f2ff; color: white; border-radius: 50%; 
+            font-size: 40px; display: flex; align-items: center; justify-content: center;
+            -webkit-user-select: none; /* Empêche la sélection de texte */
+        }
+
+        #space-view { display: none; width: 100vw; height: 100vh; background: #000; }
     </style>
 </head>
 <body class="notranslate">
 
 <audio id="bgMusic" loop>
-    <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3" type="audio/mpeg">
+    <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3" type="audio/mpeg">
 </audio>
 
 <div id="station-hall">
-    <div class="ui-msg" id="mission-text">MISSION : Rejoins le cockpit en haut !</div>
-    
-    <div id="cockpit-door">🛸 COCKPIT</div>
-    
+    <div style="background: rgba(0,0,0,0.8); padding: 10px; border-radius: 10px; margin-top: 20px;">
+        🚀 MISSION : ATTEINDRE LE COCKPIT
+    </div>
+    <div id="cockpit-door">ENTRÉE<br>COCKPIT</div>
     <div id="naomi-character">👩‍🚀</div>
 
     <div class="controls">
-        <button class="btn-move" onclick="movePerson(-20, 0)">◀️</button>
-        <button class="btn-move" onclick="movePerson(0, -20)">🔼</button>
-        <button class="btn-move" onclick="movePerson(20, 0)">▶️</button>
+        <button class="btn-move" onpointerdown="movePerson(-40, 0)">◀️</button>
+        <button class="btn-move" onpointerdown="movePerson(0, -40)">🔼</button>
+        <button class="btn-move" onpointerdown="movePerson(40, 0)">▶️</button>
     </div>
 </div>
 
@@ -57,32 +65,38 @@
 
 <script>
     let personX = window.innerWidth / 2;
-    let personY = window.innerHeight - 150;
+    let personY = window.innerHeight - 200;
     const character = document.getElementById('naomi-character');
     const music = document.getElementById('bgMusic');
 
+    // SOLUTION PROBLÈME 3 : Vitesse augmentée (on passe de 20 à 40)
     function movePerson(dx, dy) {
-        if(music.paused) music.play(); // Lance la musique au premier pas
+        if(music.paused) {
+            music.volume = 0.5;
+            music.play();
+        }
         
         personX += dx;
         personY += dy;
+        
+        // Limites de l'écran
+        personX = Math.max(50, Math.min(window.innerWidth - 50, personX));
+        
         character.style.left = personX + "px";
         character.style.top = personY + "px";
 
-        // Vérifier si elle arrive à la porte du cockpit
-        if (personY < 150) {
+        if (personY < 180) {
             checkCode();
         }
     }
 
     function checkCode() {
-        let code = prompt("ENTREZ LE CODE D'ACCÈS DU VAISSEAU :");
-        // NOUVEAU CODE : GALAXY-N
+        let code = prompt("SYSTÈME VERROUILLÉ. CODE D'ACCÈS :");
         if (code && code.toUpperCase() === "GALAXY-N") {
             startFlight();
         } else {
-            alert("CODE INCORRECT. Retour au point de départ !");
-            personY = window.innerHeight - 150;
+            alert("ERREUR. Retour au secteur de départ.");
+            personY = window.innerHeight - 200;
             character.style.top = personY + "px";
         }
     }
@@ -91,21 +105,8 @@
         document.getElementById('station-hall').style.display = 'none';
         const canvas = document.getElementById('space-view');
         canvas.style.display = 'block';
-        const ctx = canvas.getContext('2d');
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-
-        alert("🚀 DÉCOLLAGE IMMÉDIAT !");
-        
-        // Ici on remplace le personnage par le vaisseau
-        function flight() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.font = "60px serif";
-            ctx.fillText("🚀", personX - 30, personY); 
-            // Le vaisseau suit maintenant ton dernier mouvement !
-            requestAnimationFrame(flight);
-        }
-        flight();
+        alert("🚀 DÉCOLLAGE RÉUSSI !");
+        // Le reste du code de vol viendra après...
     }
 </script>
 </body>
