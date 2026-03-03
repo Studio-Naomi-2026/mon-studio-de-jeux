@@ -3,94 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="google" content="notranslate">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Studio-Naomi-2026 | Protection FR</title>
     <style>
-        /* DESIGN DU STUDIO */
-        body { 
-            background: #0d1117; color: #58a6ff; 
-            font-family: 'Segoe UI', Tahoma, sans-serif;
-            margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh;
-        }
-        header { 
-            background: #161b22; padding: 10px 20px; 
-            display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 2px solid #30363d;
-        }
-        .logo { font-weight: bold; color: #f0f6fc; letter-spacing: 1px; }
+        body { margin: 0; background: #000; color: #00f2ff; font-family: 'Courier New', monospace; overflow: hidden; }
         
-        #main-container { display: flex; flex: 1; overflow: hidden; }
-        
-        .editor-box { width: 50%; display: flex; flex-direction: column; padding: 10px; background: #0d1117; }
-        .label { font-size: 12px; color: #8b949e; margin-bottom: 5px; text-transform: uppercase; }
-        textarea { 
-            flex: 1; background: #010409; color: #79c0ff; border: 1px solid #30363d;
-            padding: 15px; font-family: 'Consolas', 'Monaco', monospace; font-size: 14px;
-            border-radius: 6px; resize: none; outline: none; line-height: 1.5;
+        /* SCÈNE 1 : LE COULOIR DE LA STATION */
+        #station-hall {
+            position: relative; width: 100vw; height: 100vh;
+            background: url('https://images.unsplash.com/photo-1516339901601-2e1b62dc0c45?auto=format&fit=crop&w=1500') center/cover;
+            display: flex; flex-direction: column; align-items: center;
         }
 
-        .preview-box { width: 50%; background: #ffffff; border-left: 2px solid #30363d; }
-        iframe { width: 100%; height: 100%; border: none; background: white; }
-
-        .controls { background: #161b22; padding: 10px; display: flex; gap: 10px; border-top: 1px solid #30363d; }
-        button { 
-            background: #238636; color: white; border: none; padding: 12px 15px; 
-            border-radius: 6px; font-weight: 600; cursor: pointer; flex: 1;
+        #naomi-character {
+            position: absolute; bottom: 100px; left: 50%;
+            font-size: 80px; transition: 0.1s; transform: translateX(-50%);
+            filter: drop-shadow(0 0 10px #00f2ff);
         }
 
-        @media (max-width: 768px) {
-            #main-container { flex-direction: column; }
-            .editor-box, .preview-box { width: 100%; height: 50%; }
+        #cockpit-door {
+            position: absolute; top: 10%; width: 120px; height: 120px;
+            background: rgba(0, 242, 255, 0.2); border: 3px dashed #00f2ff;
+            border-radius: 10px; display: flex; align-items: center; justify-content: center;
         }
+
+        /* SCÈNE 2 : LE VAISSEAU */
+        #space-view { display: none; width: 100vw; height: 100vh; background: #000; }
+
+        .ui-msg { background: rgba(0,0,0,0.8); padding: 15px; border: 1px solid #00f2ff; border-radius: 10px; margin-top: 20px; }
+        .controls { position: fixed; bottom: 20px; width: 100%; display: flex; justify-content: space-around; }
+        .btn-move { width: 80px; height: 80px; background: rgba(0,242,255,0.3); border: 2px solid #00f2ff; color: white; border-radius: 50%; font-size: 30px; }
     </style>
 </head>
 <body class="notranslate">
 
-<header>
-    <div class="logo">🕹️ STUDIO NAOMI V1</div>
-    <div style="font-size: 10px; color: #3fb950;">● PROTECTION FR ACTIVE</div>
-</header>
+<audio id="bgMusic" loop>
+    <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3" type="audio/mpeg">
+</audio>
 
-<div id="main-container">
-    <div class="editor-box">
-        <div class="label">Écris ton code ici :</div>
-        <textarea id="code-input" spellcheck="false"></textarea>
-    </div>
+<div id="station-hall">
+    <div class="ui-msg" id="mission-text">MISSION : Rejoins le cockpit en haut !</div>
     
-    <div class="preview-box">
-        <iframe id="output-window" class="notranslate"></iframe>
+    <div id="cockpit-door">🛸 COCKPIT</div>
+    
+    <div id="naomi-character">👩‍🚀</div>
+
+    <div class="controls">
+        <button class="btn-move" onclick="movePerson(-20, 0)">◀️</button>
+        <button class="btn-move" onclick="movePerson(0, -20)">🔼</button>
+        <button class="btn-move" onclick="movePerson(20, 0)">▶️</button>
     </div>
 </div>
 
-<div class="controls">
-    <button onclick="updateRender()">⚡ LANCER LE JEU</button>
-</div>
+<canvas id="space-view"></canvas>
 
 <script>
-    const input = document.getElementById('code-input');
-    const output = document.getElementById('output-window');
+    let personX = window.innerWidth / 2;
+    let personY = window.innerHeight - 150;
+    const character = document.getElementById('naomi-character');
+    const music = document.getElementById('bgMusic');
 
-    const initialCode = `<!DOCTYPE html>
-<html lang="fr" class="notranslate">
-<head><meta name="google" content="notranslate"></head>
-<body style="text-align:center; padding-top:50px; font-family:sans-serif;">
-    <h1>Bravo Naomi !</h1>
-    <p>Ce texte restera en français.</p>
-    <button onclick="alert('BIP ! Son activé')" style="padding:15px; background:blue; color:white; border:none; border-radius:10px;">TESTER LE SON</button>
-</body>
-</html>`;
+    function movePerson(dx, dy) {
+        if(music.paused) music.play(); // Lance la musique au premier pas
+        
+        personX += dx;
+        personY += dy;
+        character.style.left = personX + "px";
+        character.style.top = personY + "px";
 
-    function updateRender() {
-        const frame = output.contentDocument || output.contentWindow.document;
-        frame.open();
-        frame.write(input.value);
-        frame.close();
+        // Vérifier si elle arrive à la porte du cockpit
+        if (personY < 150) {
+            checkCode();
+        }
     }
 
-    input.addEventListener('input', updateRender);
-    input.value = initialCode;
-    updateRender();
-</script>
+    function checkCode() {
+        let code = prompt("ENTREZ LE CODE D'ACCÈS DU VAISSEAU :");
+        // NOUVEAU CODE : GALAXY-N
+        if (code && code.toUpperCase() === "GALAXY-N") {
+            startFlight();
+        } else {
+            alert("CODE INCORRECT. Retour au point de départ !");
+            personY = window.innerHeight - 150;
+            character.style.top = personY + "px";
+        }
+    }
 
+    function startFlight() {
+        document.getElementById('station-hall').style.display = 'none';
+        const canvas = document.getElementById('space-view');
+        canvas.style.display = 'block';
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        alert("🚀 DÉCOLLAGE IMMÉDIAT !");
+        
+        // Ici on remplace le personnage par le vaisseau
+        function flight() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.font = "60px serif";
+            ctx.fillText("🚀", personX - 30, personY); 
+            // Le vaisseau suit maintenant ton dernier mouvement !
+            requestAnimationFrame(flight);
+        }
+        flight();
+    }
+</script>
 </body>
 </html>
