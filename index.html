@@ -5,20 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
         body { margin: 0; background: #000; overflow: hidden; touch-action: none; font-family: 'Courier New', monospace; color: white; }
-        #game-world { width: 100vw; height: 100vh; position: relative; transition: 0.5s; background-size: cover; }
+        #game-world { width: 100vw; height: 100vh; position: relative; background: url('https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?q=80&w=2072') center/cover; }
         
-        #naomi { position: absolute; width: 50px; height: 50px; font-size: 45px; z-index: 100; transition: 0.4s ease-out; transform: translate(-50%, -50%); }
+        #naomi { position: absolute; width: 50px; height: 50px; font-size: 45px; z-index: 100; transition: 0.5s ease-out; transform: translate(-50%, -50%); }
         
-        /* PERSONNAGES VIVANTS */
-        .entity { position: absolute; font-size: 35px; z-index: 10; transform: translate(-50%, -50%); transition: 1s ease-in-out; }
-        .living { animation: breath 2s infinite alternate; }
-        @keyframes breath { from { transform: translate(-50%, -50%) scale(1); } to { transform: translate(-50%, -50%) scale(1.1); } }
+        /* PNJ VIVANTS */
+        .entity { position: absolute; font-size: 35px; z-index: 10; transform: translate(-50%, -50%); transition: 1.5s ease-in-out; }
+        .living { animation: float 3s infinite alternate ease-in-out; }
+        @keyframes float { from { margin-top: 0px; } to { margin-top: -15px; } }
 
-        /* INVENTAIRE */
-        #inventory { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 15px; border: 2px solid #00f2ff; z-index: 200; }
-        .slot { width: 45px; height: 45px; border: 1px solid #444; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 25px; }
+        /* INVENTAIRE STARDEW */
+        #inventory { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; background: rgba(20, 20, 40, 0.9); padding: 8px; border-radius: 12px; border: 2px solid #00f2ff; z-index: 200; }
+        .slot { width: 40px; height: 40px; border: 1px solid #333; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; font-size: 22px; }
         
-        #dialog { position: fixed; top: 70px; left: 50%; transform: translateX(-50%); width: 80%; background: rgba(26, 26, 46, 0.9); border: 2px solid #00f2ff; padding: 10px; border-radius: 10px; display: none; text-align: center; }
+        #dialog { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); width: 85%; background: rgba(0,0,0,0.8); border: 1px solid #00f2ff; padding: 10px; border-radius: 8px; display: none; z-index: 300; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -28,29 +28,35 @@
     <div id="entities"></div>
     <div id="dialog"></div>
     <div id="inventory">
-        <div class="slot" id="slot-0"></div>
-        <div class="slot" id="slot-1"></div>
-        <div class="slot" id="slot-2"></div>
+        <div class="slot" id="s0"></div><div class="slot" id="s1"></div><div class="slot" id="s2"></div>
     </div>
 </div>
+
+<audio id="bgm" loop>
+    <source src="https://www.chosic.com/wp-content/uploads/2021/04/Enthusiast.mp3" type="audio/mpeg">
+</audio>
 
 <script>
     const world = document.getElementById('game-world');
     const naomi = document.getElementById('naomi');
     const entContainer = document.getElementById('entities');
-    const dialog = document.getElementById('dialog');
-    const slots = [document.getElementById('slot-0'), document.getElementById('slot-1'), document.getElementById('slot-2')];
+    const bgm = document.getElementById('bgm');
+    const slots = [document.getElementById('s0'), document.getElementById('s1'), document.getElementById('s2')];
 
     let inv = [];
-    let currentX = window.innerWidth/2, currentY = window.innerHeight/2;
+    let musicStarted = false;
+    
+    // 50 personnages ? Commençons par une petite équipe vivante
     let entities = [
-        { id: 1, x: 100, y: 200, type: "🤖", name: "B0T-4", msg: "Trouve les 💎 cachés !", living: true },
-        { id: 2, x: 250, y: 400, type: "💎", name: "Cristal", item: true }
+        { id: 1, x: 80, y: 150, type: "🤖", name: "B0T-4", msg: "Les 💎 sont cachés dans les étoiles...", living: true },
+        { id: 2, x: 280, y: 300, type: "🛸", name: "Drone", msg: "Bip-boup... Système OK.", living: true },
+        { id: 3, x: 200, y: 450, type: "💎", name: "Cristal", item: true, hidden: true }
     ];
 
     function draw() {
         entContainer.innerHTML = '';
         entities.forEach(e => {
+            if (e.hidden) return; // Ne pas afficher si c'est caché
             const d = document.createElement('div');
             d.className = 'entity' + (e.living ? ' living' : '');
             d.innerHTML = e.type;
@@ -61,46 +67,58 @@
     }
 
     window.addEventListener('pointerdown', (e) => {
-        currentX = e.clientX; currentY = e.clientY;
-        naomi.style.left = currentX + "px";
-        naomi.style.top = currentY + "px";
+        // Démarrer la musique au premier clic
+        if (!musicStarted) {
+            bgm.play();
+            musicStarted = true;
+        }
+
+        const targetX = e.clientX;
+        const targetY = e.clientY;
+        naomi.style.left = targetX + "px";
+        naomi.style.top = targetY + "px";
         
-        setTimeout(checkCollisions, 400);
+        // Vérifier si Naomi trouve quelque chose
+        setTimeout(() => checkInteractions(targetX, targetY), 500);
     });
 
-    function checkCollisions() {
-        entities.forEach((e, index) => {
-            let dist = Math.hypot(currentX - e.x, currentY - e.y);
-            
-            if (dist < 50) {
+    function checkInteractions(x, y) {
+        entities.forEach((e, i) => {
+            let d = Math.hypot(x - e.x, y - e.y);
+            if (d < 60) {
                 if (e.item) {
-                    // RAMASSER
                     if (inv.length < 3) {
                         inv.push(e.type);
                         slots[inv.length-1].innerHTML = e.type;
-                        entities.splice(index, 1); // Disparaît du monde
+                        entities.splice(i, 1);
                         draw();
                     }
-                } else if (e.msg) {
-                    // PARLER
-                    dialog.innerHTML = `<strong>${e.name}</strong>: ${e.msg}`;
-                    dialog.style.display = 'block';
-                    setTimeout(() => dialog.style.display = 'none', 3000);
+                } else {
+                    showDialog(e.name, e.msg);
+                    // Révéler le cristal si on parle au robot !
+                    if (e.name === "B0T-4") entities[2].hidden = false; draw();
                 }
             }
         });
     }
 
-    // SIMULER LA VIE (Le robot bouge un peu tout seul)
+    function showDialog(who, text) {
+        const box = document.getElementById('dialog');
+        box.innerHTML = `<strong>${who}</strong>: ${text}`;
+        box.style.display = 'block';
+        setTimeout(() => box.style.display = 'none', 3000);
+    }
+
+    // Mouvement autonome des robots (comme Stardew)
     setInterval(() => {
         entities.forEach(e => {
             if (e.living) {
-                e.x += (Math.random() - 0.5) * 20;
-                e.y += (Math.random() - 0.5) * 20;
+                e.x += (Math.random() - 0.5) * 40;
+                e.y += (Math.random() - 0.5) * 40;
             }
         });
         draw();
-    }, 2000);
+    }, 3000);
 
     draw();
 </script>
