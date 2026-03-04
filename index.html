@@ -3,111 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="google" content="notranslate">
     <style>
-        body { margin: 0; background: #000; color: #00f2ff; font-family: 'Courier New', monospace; overflow: hidden; touch-action: manipulation; }
+        body { margin: 0; background: #000; overflow: hidden; touch-action: none; font-family: 'Courier New', monospace; }
+        #world { width: 100vw; height: 100vh; position: relative; transition: background 0.5s; }
         
-        #station-hall {
-            position: relative; width: 100vw; height: 100vh;
-            background: url('https://images.unsplash.com/photo-1516339901601-2e1b62dc0c45?auto=format&fit=crop&w=1500') center/cover;
-            display: flex; flex-direction: column; align-items: center;
+        /* NAOMI */
+        #naomi { 
+            position: absolute; width: 60px; height: 60px; font-size: 50px; 
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.3s ease-out; transform: translate(-50%, -50%);
+            z-index: 10;
         }
 
-        #naomi-character {
-            position: absolute; bottom: 100px; left: 50%;
-            font-size: 80px; transition: 0.05s; transform: translateX(-50%);
-            filter: drop-shadow(0 0 15px #00f2ff);
-            pointer-events: none; /* Empêche de cliquer par erreur sur le perso */
+        /* DÉCORS ET ÉLÉMENTS */
+        .room-label { position: absolute; top: 20px; width: 100%; text-align: center; color: white; background: rgba(0,0,0,0.5); padding: 5px 0; }
+        .npc { position: absolute; font-size: 40px; z-index: 5; }
+        .dialog-box { 
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            width: 90%; background: #2c3e50; border: 4px solid #ecf0f1; color: white;
+            padding: 15px; border-radius: 10px; display: none; z-index: 20;
         }
-
-        #cockpit-door {
-            position: absolute; top: 10%; width: 150px; height: 150px;
-            background: rgba(0, 242, 255, 0.1); border: 4px dashed #00f2ff;
-            border-radius: 20px; display: flex; align-items: center; justify-content: center;
-            font-weight: bold; animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
-
-        .controls { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: space-around; padding: 0 10px; box-sizing: border-box; }
-        
-        .btn-move { 
-            width: 90px; height: 90px; background: rgba(0,242,255,0.2); 
-            border: 3px solid #00f2ff; color: white; border-radius: 50%; 
-            font-size: 40px; display: flex; align-items: center; justify-content: center;
-            -webkit-user-select: none; /* Empêche la sélection de texte */
-        }
-
-        #space-view { display: none; width: 100vw; height: 100vh; background: #000; }
     </style>
 </head>
-<body class="notranslate">
+<body>
 
-<audio id="bgMusic" loop>
-    <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3" type="audio/mpeg">
-</audio>
-
-<div id="station-hall">
-    <div style="background: rgba(0,0,0,0.8); padding: 10px; border-radius: 10px; margin-top: 20px;">
-        🚀 MISSION : ATTEINDRE LE COCKPIT
-    </div>
-    <div id="cockpit-door">ENTRÉE<br>COCKPIT</div>
-    <div id="naomi-character">👩‍🚀</div>
-
-    <div class="controls">
-        <button class="btn-move" onpointerdown="movePerson(-40, 0)">◀️</button>
-        <button class="btn-move" onpointerdown="movePerson(0, -40)">🔼</button>
-        <button class="btn-move" onpointerdown="movePerson(40, 0)">▶️</button>
-    </div>
+<div id="world">
+    <div class="room-label" id="room-name">DORTOIR DE NAOMI</div>
+    <div id="naomi">👩‍🚀</div>
+    <div id="npc-robot" class="npc" style="top: 200px; left: 100px; display:none;">🤖</div>
+    <div id="dialog" class="dialog-box"></div>
 </div>
 
-<canvas id="space-view"></canvas>
-
 <script>
-    let personX = window.innerWidth / 2;
-    let personY = window.innerHeight - 200;
-    const character = document.getElementById('naomi-character');
-    const music = document.getElementById('bgMusic');
+    const world = document.getElementById('world');
+    const naomi = document.getElementById('naomi');
+    const roomName = document.getElementById('room-name');
+    const npcRobot = document.getElementById('npc-robot');
+    const dialog = document.getElementById('dialog');
 
-    // SOLUTION PROBLÈME 3 : Vitesse augmentée (on passe de 20 à 40)
-    function movePerson(dx, dy) {
-        if(music.paused) {
-            music.volume = 0.5;
-            music.play();
-        }
-        
-        personX += dx;
-        personY += dy;
-        
-        // Limites de l'écran
-        personX = Math.max(50, Math.min(window.innerWidth - 50, personX));
-        
-        character.style.left = personX + "px";
-        character.style.top = personY + "px";
+    let currentRoom = "dortoir";
+    let posX = window.innerWidth / 2;
+    let posY = window.innerHeight / 2;
 
-        if (personY < 180) {
-            checkCode();
-        }
+    // COULEURS DES PIÈCES
+    const rooms = {
+        dortoir: { name: "DORTOIR", bg: "#2c3e50", npc: false },
+        salon: { name: "SALON COMMUN", bg: "#1a5276", npc: true },
+        cockpit: { name: "COCKPIT DE PILOTAGE", bg: "#1b2631", npc: false }
+    };
+
+    function updateView() {
+        world.style.backgroundColor = rooms[currentRoom].bg;
+        roomName.innerText = rooms[currentRoom].name;
+        npcRobot.style.display = rooms[currentRoom].npc ? "block" : "none";
+        naomi.style.left = posX + "px";
+        naomi.style.top = posY + "px";
     }
 
-    function checkCode() {
-        let code = prompt("SYSTÈME VERROUILLÉ. CODE D'ACCÈS :");
-        if (code && code.toUpperCase() === "GALAXY-N") {
-            startFlight();
+    // DÉPLACEMENT LIBRE (STARDEW STYLE)
+    window.addEventListener('pointerdown', (e) => {
+        posX = e.clientX;
+        posY = e.clientY;
+        
+        // CHANGER DE PIÈCE SI ON TOUCHE LES BORDS
+        if (posX > window.innerWidth - 30) {
+            if (currentRoom === "dortoir") currentRoom = "salon";
+            else if (currentRoom === "salon") currentRoom = "cockpit";
+            posX = 50;
+        } else if (posX < 30) {
+            if (currentRoom === "cockpit") currentRoom = "salon";
+            else if (currentRoom === "salon") currentRoom = "dortoir";
+            posX = window.innerWidth - 50;
+        }
+
+        updateView();
+        checkNPC();
+    });
+
+    function checkNPC() {
+        if (currentRoom === "salon" && Math.abs(posX - 100) < 50 && Math.abs(posY - 200) < 50) {
+            showDialog("B0T-4 : Bonjour Naomi ! Prête pour le décollage ? Le code est GALAXY-N.");
         } else {
-            alert("ERREUR. Retour au secteur de départ.");
-            personY = window.innerHeight - 200;
-            character.style.top = personY + "px";
+            dialog.style.display = "none";
         }
     }
 
-    function startFlight() {
-        document.getElementById('station-hall').style.display = 'none';
-        const canvas = document.getElementById('space-view');
-        canvas.style.display = 'block';
-        alert("🚀 DÉCOLLAGE RÉUSSI !");
-        // Le reste du code de vol viendra après...
+    function showDialog(text) {
+        dialog.innerText = text;
+        dialog.style.display = "block";
     }
+
+    updateView();
 </script>
 </body>
 </html>
