@@ -1,126 +1,115 @@
-<!DOCTYPE html>
-<html lang="fr" class="notranslate">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <style>
-        body { margin: 0; background: #000; overflow: hidden; touch-action: none; font-family: 'Courier New', monospace; color: white; }
-        #game-world { width: 100vw; height: 100vh; position: relative; background: url('https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?q=80&w=2072') center/cover; }
-        
-        #naomi { position: absolute; width: 50px; height: 50px; font-size: 45px; z-index: 100; transition: 0.5s ease-out; transform: translate(-50%, -50%); }
-        
-        /* PNJ VIVANTS */
-        .entity { position: absolute; font-size: 35px; z-index: 10; transform: translate(-50%, -50%); transition: 1.5s ease-in-out; }
-        .living { animation: float 3s infinite alternate ease-in-out; }
-        @keyframes float { from { margin-top: 0px; } to { margin-top: -15px; } }
+# =====================================
+# CLASSE JOUEUR (PLAYER CLASS)
+# Gère (manages) le joueur (player) principal (main)
+# =====================================
 
-        /* INVENTAIRE STARDEW */
-        #inventory { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; background: rgba(20, 20, 40, 0.9); padding: 8px; border-radius: 12px; border: 2px solid #00f2ff; z-index: 200; }
-        .slot { width: 40px; height: 40px; border: 1px solid #333; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; font-size: 22px; }
-        
-        #dialog { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); width: 85%; background: rgba(0,0,0,0.8); border: 1px solid #00f2ff; padding: 10px; border-radius: 8px; display: none; z-index: 300; font-size: 14px; }
-    </style>
-</head>
-<body>
+from ursina import *
 
-<div id="game-world">
-    <div id="naomi">👩‍🚀</div>
-    <div id="entities"></div>
-    <div id="dialog"></div>
-    <div id="inventory">
-        <div class="slot" id="s0"></div><div class="slot" id="s1"></div><div class="slot" id="s2"></div>
-    </div>
-</div>
-
-<audio id="bgm" loop>
-    <source src="https://www.chosic.com/wp-content/uploads/2021/04/Enthusiast.mp3" type="audio/mpeg">
-</audio>
-
-<script>
-    const world = document.getElementById('game-world');
-    const naomi = document.getElementById('naomi');
-    const entContainer = document.getElementById('entities');
-    const bgm = document.getElementById('bgm');
-    const slots = [document.getElementById('s0'), document.getElementById('s1'), document.getElementById('s2')];
-
-    let inv = [];
-    let musicStarted = false;
+class Joueur:
+    """
+    Classe (Class) représentant (representing) le joueur (player)
+    Gère (manages) la position (position), les contrôles (controls), 
+    le saut (jump), et la physique (physics)
+    """
     
-    // 50 personnages ? Commençons par une petite équipe vivante
-    let entities = [
-        { id: 1, x: 80, y: 150, type: "🤖", name: "B0T-4", msg: "Les 💎 sont cachés dans les étoiles...", living: true },
-        { id: 2, x: 280, y: 300, type: "🛸", name: "Drone", msg: "Bip-boup... Système OK.", living: true },
-        { id: 3, x: 200, y: 450, type: "💎", name: "Cristal", item: true, hidden: true }
-    ];
-
-    function draw() {
-        entContainer.innerHTML = '';
-        entities.forEach(e => {
-            if (e.hidden) return; // Ne pas afficher si c'est caché
-            const d = document.createElement('div');
-            d.className = 'entity' + (e.living ? ' living' : '');
-            d.innerHTML = e.type;
-            d.style.left = e.x + "px";
-            d.style.top = e.y + "px";
-            entContainer.appendChild(d);
-        });
-    }
-
-    window.addEventListener('pointerdown', (e) => {
-        // Démarrer la musique au premier clic
-        if (!musicStarted) {
-            bgm.play();
-            musicStarted = true;
-        }
-
-        const targetX = e.clientX;
-        const targetY = e.clientY;
-        naomi.style.left = targetX + "px";
-        naomi.style.top = targetY + "px";
+    def __init__(self):
+        """
+        Constructeur (Constructor) - Initialise (initializes) le joueur (player)
+        """
         
-        // Vérifier si Naomi trouve quelque chose
-        setTimeout(() => checkInteractions(targetX, targetY), 500);
-    });
-
-    function checkInteractions(x, y) {
-        entities.forEach((e, i) => {
-            let d = Math.hypot(x - e.x, y - e.y);
-            if (d < 60) {
-                if (e.item) {
-                    if (inv.length < 3) {
-                        inv.push(e.type);
-                        slots[inv.length-1].innerHTML = e.type;
-                        entities.splice(i, 1);
-                        draw();
-                    }
-                } else {
-                    showDialog(e.name, e.msg);
-                    // Révéler le cristal si on parle au robot !
-                    if (e.name === "B0T-4") entities[2].hidden = false; draw();
-                }
-            }
-        });
-    }
-
-    function showDialog(who, text) {
-        const box = document.getElementById('dialog');
-        box.innerHTML = `<strong>${who}</strong>: ${text}`;
-        box.style.display = 'block';
-        setTimeout(() => box.style.display = 'none', 3000);
-    }
-
-    // Mouvement autonome des robots (comme Stardew)
-    setInterval(() => {
-        entities.forEach(e => {
-            if (e.living) {
-                e.x += (Math.random() - 0.5) * 40;
-                e.y += (Math.random() - 0.5) * 40;
-            }
-        });
-        draw();
-    }, 3000);
-
-    draw();
-</script>
-</body>
-</html>
+        # Créer (Create) le modèle (model) 3D du joueur (player)
+        self.modele = Actor(
+            model='box',  # Forme (shape) = boîte (box)
+            scale=(0.5, 1, 0.5),  # Échelle (scale) - largeur (width), hauteur (height), profondeur (depth)
+            color=color.blue()  # Couleur (color) = bleu (blue)
+        )
+        
+        # Position initiale (initial position)
+        self.modele.position = (0, 5, 0)  # x, y, z
+        
+        # Vitesse (speed) et direction (direction)
+        self.vitesse_x = 0  # Vitesse sur l'axe X (X-axis speed)
+        self.vitesse_z = 0  # Vitesse sur l'axe Z (Z-axis speed)
+        self.vitesse_y = 0  # Vitesse verticale (vertical speed) - gravité (gravity)
+        
+        # Paramètres (parameters) de mouvement (movement)
+        self.vitesse_deplacement = 0.3  # Vitesse de déplacement (movement speed)
+        self.vitesse_saut = 0.8  # Vitesse initiale du saut (initial jump speed)
+        self.gravite = 0.05  # Force de gravité (gravity force)
+        
+        # État (state) du joueur (player)
+        self.au_sol = False  # Est au sol (is on ground) ?
+        self.peut_sauter = True  # Peut sauter (can jump) ?
+        
+    def controles(self):
+        """
+        Gère (manages) les entrées (inputs) du clavier (keyboard)
+        Mouvements (movements) : Z, Q, S, D
+        Saut (jump) : ESPACE (SPACE)
+        """
+        
+        # Réinitialiser (Reset) les vitesses (speeds)
+        self.vitesse_x = 0
+        self.vitesse_z = 0
+        
+        # Vérifier (Check) les touches (keys) pressées (pressed)
+        if held_keys['z'] or held_keys['w']:  # Avancer (forward) - Z ou W
+            self.vitesse_z += self.vitesse_deplacement
+        
+        if held_keys['s']:  # Reculer (backward) - S
+            self.vitesse_z -= self.vitesse_deplacement
+        
+        if held_keys['q'] or held_keys['a']:  # Gauche (left) - Q ou A
+            self.vitesse_x -= self.vitesse_deplacement
+        
+        if held_keys['d']:  # Droite (right) - D
+            self.vitesse_x += self.vitesse_deplacement
+        
+        # Saut (jump) avec ESPACE (SPACE)
+        if held_keys['space'] and self.peut_sauter:  # ESPACE = SPACE
+            self.vitesse_y = self.vitesse_saut
+            self.peut_sauter = False
+            self.au_sol = False
+        
+        # Appliquer (Apply) les vitesses (speeds) à la position (position)
+        self.modele.x += self.vitesse_x
+        self.modele.z += self.vitesse_z
+    
+    def appliquer_gravite(self):
+        """
+        Applique (applies) la gravité (gravity) au joueur (player)
+        Fait tomber (makes fall) le joueur (player) vers le bas (downward)
+        """
+        
+        # Ajouter (Add) la gravité (gravity) à la vitesse verticale (vertical speed)
+        if not self.au_sol:  # Si pas au sol (if not on ground)
+            self.vitesse_y -= self.gravite
+        else:
+            # Arrêter (Stop) la chute (falling) si au sol (if on ground)
+            self.vitesse_y = 0
+            self.peut_sauter = True  # Permettre (allow) de sauter (jump) à nouveau (again)
+        
+        # Appliquer (Apply) la vitesse verticale (vertical speed)
+        self.modele.y += self.vitesse_y
+        
+        # Empêcher (Prevent) le joueur (player) de tomber (falling) infiniment (infinitely)
+        if self.modele.y < -10:  # Si trop bas (if too low)
+            self.modele.position = (0, 5, 0)  # Respawn (réapparaître) au départ (start)
+    
+    def verifier_collisions(self, plateformes):
+        """
+        Vérifie (checks) les collisions (collisions) entre (between) 
+        le joueur (player) et les plateformes (platforms)
+        """
+        
+        self.au_sol = False  # Supposer (assume) que le joueur (player) n'est pas au sol (not on ground)
+        
+        # Vérifier (Check) chaque plateforme (each platform)
+        for plateforme in plateformes:
+            # Vérifier (Check) si le joueur (player) touche (touches) une plateforme (platform)
+            distance = distance(self.modele, plateforme)  # Distance entre (between) les deux (two)
+            
+            if distance < 1:  # Si collision (if collision)
+                # Le joueur (player) est au sol (is on ground)
+                self.au_sol = True
+                self.modele.y = plateforme.y + 1  # Placer (place) le joueur (player) sur (on) la plateforme (platform)
