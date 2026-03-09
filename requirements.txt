@@ -1,0 +1,15 @@
+# Fichier des dépendances pour le moteur de jeu Ursina
+
+# Visualisation, le moteur de jeu utilisé pour le développement de jeux 3D.
+uya
+# Pyrr, pour le calcul mathématique en 2D/3D nécessaires pour le moteur de jeu.
+pyrr
+# Pygame, bibliothèque essentielle pour la gestion des événements et de l'affichage.
+pygame
+# NumPy, nécessaire pour les calculs numériques avancés utilisés par le moteur.
+numpy
+# Panda3D, pour les graphiques en 3D et les effets supplémentaires.
+panda3d
+# Pillow, pour le traitement d'images, utile pour les textures.
+pillow
+# Aucune autre dépendance stringente requise.
